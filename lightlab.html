@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GR3EN: Generative Relighting for 3D Environments</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans|Castoro" rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+  <script src="./static/js/video_comparison.js"></script>
+</head>
+
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const master = document.getElementById("master-video");
+    const allVideos = Array.from(document.querySelectorAll("video.sync-video"));
+    const slaves = allVideos.filter(v => v !== master);
+
+    // Make sure all videos are ready
+    allVideos.forEach(v => {
+      v.preload = "auto";
+    });
+
+    function syncTimes() {
+      const t = master.currentTime;
+      slaves.forEach(v => {
+        if (Math.abs(v.currentTime - t) > 0.05) {
+          v.currentTime = t;
+        }
+      });
+    }
+
+    master.addEventListener("play", () => {
+      syncTimes();
+      slaves.forEach(v => v.play());
+    });
+
+    master.addEventListener("pause", () => {
+      slaves.forEach(v => v.pause());
+    });
+
+    master.addEventListener("seeking", () => {
+      syncTimes();
+    });
+
+    // Keep them tightly synced while playing / looping
+    master.addEventListener("timeupdate", () => {
+      syncTimes();
+    });
+
+    // When metadata is ready, align start time (helps with autoplay)
+    master.addEventListener("loadedmetadata", () => {
+      slaves.forEach(v => {
+        v.currentTime = master.currentTime;
+      });
+
+      // In case autoplay was blocked, try to start it programmatically
+      if (master.autoplay && master.muted) {
+        master.play().catch(() => { /* ignore autoplay block */ });
+      }
+    });
+  });
+</script>
+
+
+
+<body>
+
+    <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+
+            <h1 class="title is-1 publication-title">GR3EN: Generative Relighting for <br> 3D Environments</h1>
+            <div class="is-size-4 publication-authors">
+              <span class="author-block">
+                <a href="#" target="_blank" style="font-size: 120%;"><b>Anonymous Submission</b></a>
+              </span>
+            </div>
+            <br>
+
+            <div class="publication-links">
+              <span class="link-block">
+                <a href="./index.html" class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                    <i class="fas fa-home"></i>
+                  </span>
+                  <span>Main Page</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="./lightlab.html" id="active-button" class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                    <i class="fas fa-flask"></i>
+                  </span>
+                  <span>Compare with LightLab</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="./dfrender.html" class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                    <i class="fas fa-flask"></i>
+                  </span>
+                  <span>Compare with DiffusionRenderer</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="./fine_control.html" class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                    <i class="fas fa-flask"></i>
+                  </span>
+                  <span>Fine-grained Control</span>
+                </a>
+              </span>
+              
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="section">
+    <div class="container is-max-desktop">
+
+      <h3 class="title is-3">3D Environment Relighting</h3>
+
+
+      <div class="column is-full">
+        <div class="content has-text-left">
+          <ul style="margin-top: -20px;">
+            <!-- <li><b>Target light condition</b>: Desk lamp is turned on and emits warm yellow light. The ceiling lamp close to the coach is turned on, emits white light, while other ceiling lamps are turned off. The rest lights in the scene are also turned off. </li> -->
+          </ul>
+        </div>
+               <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <!-- MASTER VIDEO: has controls -->
+            <video id="master-video" class="video sync-video"
+                  playsinline muted autoplay loop controls
+                  src="./relit_compare/seating_light2/input.mp4"></video>
+                  <b>Input Video</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/seating_light2/condition.mp4"></video>
+                  <b>Target Light Condition</b>
+          </div>
+        </div>
+
+        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/seating_light2/lightlab_relit.mp4"></video>
+                  <b>LightLab Relighting</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/seating_light2/our_relit.mp4"></video>
+                  <b>Our Relighting</b>
+          </div>
+        </div>
+
+        <hr>
+        <div class="column is-full">
+        <div class="content has-text-left">
+          <ul style="margin-top: -20px;">
+            <!-- <li><b>Target light condition</b>: Desk lamp is turned on and emits warm yellow light. The ceiling lamp close to the coach is turned on, emits white light, while other ceiling lamps are turned off. The rest lights in the scene are also turned off. </li> -->
+          </ul>
+        </div>
+               <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <!-- MASTER VIDEO: has controls -->
+            <video id="master-video" class="video sync-video"
+                  playsinline muted autoplay loop controls
+                  src="./relit_compare/office1a_2/input.mp4"></video>
+                  <b>Input Video</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/office1a_2/condition.mp4"></video>
+                  <b>Target Light Condition</b>
+          </div>
+        </div>
+
+        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/office1a_2/lightlab_relit.mp4"></video>
+                  <b>LightLab Relighting</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/office1a_2/our_relit.mp4"></video>
+                  <b>Our Relighting</b>
+          </div>
+        </div>
+        <hr>
+         <div class="column is-full">
+        <div class="content has-text-left">
+          <ul style="margin-top: -20px;">
+            <!-- <li><b>Target light condition</b>: Ceiling lamps close to the windows are turned off, the rest ceiling lamps remains on and emits white light, there is no light come from the window. </li> -->
+          </ul>
+        </div>
+               <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <!-- MASTER VIDEO: has controls -->
+            <video id="master-video" class="video sync-video"
+                  playsinline muted autoplay loop controls
+                  src="./relit_compare/office1a/input.mp4"></video>
+                  <b>Input Video</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/office1a/condition.mp4"></video>
+                  <b>Target Light Condition</b>
+          </div>
+        </div>
+
+        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/office1a/lightlab_relit.mp4"></video>
+                  <b>LightLab Relighting</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/office1a/our_relit.mp4"></video>
+                  <b>Our Relighting</b>
+          </div>
+        </div>
+        <hr>
+
+        <div class="column is-full">
+        <div class="content has-text-left">
+          <ul style="margin-top: -20px;">
+            <!-- <li><b>Target light condition</b>: Ceiling lamps close to the windows are turned off, the rest ceiling lamps remains on and emits white light, there is no light come from the window. </li> -->
+          </ul>
+        </div>
+               <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <!-- MASTER VIDEO: has controls -->
+            <video id="master-video" class="video sync-video"
+                  playsinline muted autoplay loop controls
+                  src="./relit_compare/kitchen/input.mp4"></video>
+                  <b>Input Video</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/kitchen/condition.mp4"></video>
+                  <b>Target Light Condition</b>
+          </div>
+        </div>
+
+        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/kitchen/lightlab_relit.mp4"></video>
+                  <b>LightLab Relighting</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/kitchen/our_relit.mp4"></video>
+                  <b>Our Relighting</b>
+          </div>
+        </div>
+
+        <hr>
+
+      <div class="column is-full">
+        <div class="content has-text-left">
+          <ul style="margin-top: -20px;">
+             <!-- <li><b>Target light condition</b>: The lmap on the desk is turned on, and emits warm yellow light. </li> -->
+          </ul>
+        </div>
+        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <!-- MASTER VIDEO: has controls -->
+            <video id="master-video" class="video sync-video"
+                  playsinline muted autoplay loop controls
+                  src="./relit_compare/seating_light1/input.mp4"></video>
+                  <b>Input Video</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/seating_light1/condition.mp4"></video>
+                  <b>Target Light Condition</b>
+          </div>
+        </div>
+
+        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/seating_light1/lightlab_relit.mp4"></video>
+                  <b>LightLab Relighting</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video"
+                  playsinline muted autoplay loop
+                  src="./relit_compare/seating_light1/our_relit.mp4"></video>
+                  <b>Our Relighting</b>
+          </div>
+        </div>
+
+       
+
+        
+
+<!-- 
+      <h3 class="title is-3">Fine Grainded Light Control</h3>
+      <div class="column is-full">
+        <div class="content has-text-left">
+          <ul style="margin-top: -20px;">
+            <li><b>On the top</b>: we show renderings from our baked NeRF;</li>
+            <li><b>On the bottom</b>: we show a frame by frame comparsion againist the SOTA single view relighting method - LightLab.</li>
+          </ul>
+        </div>
+      </div> -->
+<!-- 
+      <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered ">
+        <div class="column is-one-third">
+          <video class="video" loop playsinline muted autoplay controls src="./static/diffusion_samples/vertical-stanford_orb-grogu_scene001-grogu_scene002.mp4"></video>
+        </div>
+        <div class="column is-one-third">
+          <video class="video" loop playsinline muted autoplay controls src="./static/diffusion_samples/vertical-tensoir-hotdog-bridge.mp4"></video>
+        </div>
+        <div class="column is-one-third">
+          <video class="video" loop playsinline muted autoplay controls src="./static/diffusion_samples/vertical-cat3d-unicorn-blinds.mp4"></video>
+        </div>
+      </div> -->
+
+    <!-- </div> -->
+  </section>
+
+
+
+</body>
+
+</html>

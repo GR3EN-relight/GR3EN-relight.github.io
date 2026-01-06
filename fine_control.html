@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GR3EN: Generative Relighting for 3D Environments</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans|Castoro" rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+  <script src="./static/js/video_comparison.js"></script>
+
+  <!-- Inline CSS for swipe video comparison -->
+  <style>
+    .video-compare-wrapper {
+      max-width: 100%;
+      margin-top: 1.5rem;
+    }
+
+    .video-wipe-container {
+      position: relative;
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border-radius: 12px;
+      background: black;
+    }
+
+    .video-wipe-container video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .video-wipe-container .videoA {
+      z-index: 1;
+      clip-path: inset(0 50% 0 0);
+    }
+
+    .video-wipe-container .videoB {
+      z-index: 1;
+      clip-path: inset(0 0 0 50%);
+    }
+
+    .video-compare-range {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      z-index: 5;
+      background: transparent;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: ew-resize;
+    }
+
+    .video-compare-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 0;
+      height: 100%;
+    }
+
+    .video-compare-range::-moz-range-thumb {
+      width: 0;
+      height: 100%;
+      border: none;
+    }
+
+    .video-compare-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: calc(50% - 12px);
+      width: 24px;
+      z-index: 6;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .video-compare-handle-line {
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.7);
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .video-compare-handle-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+    }
+  </style>
+</head>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const master = document.getElementById("master-video");
+    if (!master) return;
+
+    const allVideos = Array.from(document.querySelectorAll("video.sync-video"));
+    const slaves = allVideos.filter(v => v !== master);
+
+    allVideos.forEach(v => {
+      v.preload = "auto";
+    });
+
+    function syncTimes() {
+      const t = master.currentTime;
+      slaves.forEach(v => {
+        if (Math.abs(v.currentTime - t) > 0.05) {
+          v.currentTime = t;
+        }
+      });
+    }
+
+    master.addEventListener("play", () => {
+      syncTimes();
+      slaves.forEach(v => v.play());
+    });
+
+    master.addEventListener("pause", () => {
+      slaves.forEach(v => v.pause());
+    });
+
+    master.addEventListener("seeking", () => {
+      syncTimes();
+    });
+
+    master.addEventListener("timeupdate", () => {
+      syncTimes();
+    });
+
+    master.addEventListener("loadedmetadata", () => {
+      slaves.forEach(v => {
+        v.currentTime = master.currentTime;
+      });
+
+      if (master.autoplay && master.muted) {
+        master.play().catch(() => { });
+      }
+    });
+  });
+</script>
+
+<body>
+
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+
+            <h1 class="title is-1 publication-title">GR3EN: Generative Relighting for <br> 3D Environments</h1>
+            <div class="is-size-4 publication-authors">
+              <span class="author-block">
+                <a href="#" target="_blank" style="font-size: 120%;"><b>Anonymous Submission</b></a>
+              </span>
+            </div>
+            <br>
+
+            <div class="publication-links">
+              <span class="link-block">
+                <a href="./index.html" class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                    <i class="fas fa-home"></i>
+                  </span>
+                  <span>Main Page</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="./lightlab.html" class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                    <i class="fas fa-flask"></i>
+                  </span>
+                  <span>Compare with LightLab</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="./dfrender.html" class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                    <i class="fas fa-flask"></i>
+                  </span>
+                  <span>Compare with DiffusionRenderer</span>
+                </a>
+              </span>
+            </div>
+             <span class="link-block">
+                <a href="./fine_control.html" id="active-button" class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                    <i class="fas fa-flask"></i>
+                  </span>
+                  <span>Fine-grained Control</span>
+                </a>
+              </span>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fine-grained Light Control -->
+  <section class="section">
+    <div class="container is-max-desktop">
+      <h3 class="title is-3">Fine-grained Light Control</h3>
+
+      <div class="column is-full">
+        <!-- <div class="content has-text-left">
+          <ul style="margin-top: -20px;">
+            <li>
+              Here we apply random out of distribution color.  
+            </li>
+          </ul>
+        </div> -->
+
+        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <!-- No duplicate ID here -->
+            <video class="video sync-video" playsinline muted autoplay loop controls
+              src="./relit_compare/office1a/input.mp4"></video>
+            <b>Input Video</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video" playsinline muted autoplay loop
+              src="./relit_compare/more_color/rg_condition.mp4"></video>
+            <b>Target Light Condition</b>
+          </div>
+        </div>
+
+        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <video class="video sync-video" playsinline muted autoplay loop
+              src="./relit_compare/more_color/rg_lightlab.mp4"></video>
+            <b>LightLab Relighting</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video" playsinline muted autoplay loop
+              src="./relit_compare/more_color/rg_our.mp4"></video>
+            <b>Our Relighting</b>
+          </div>
+        </div>
+      </div> <!-- .column is-full -->
+      <hr>
+      <div class="column is-full">
+        <!-- <div class="content has-text-left">
+          <ul style="margin-top: -20px;">
+            <li>
+              Here we apply random out of distribution color.  
+            </li>
+          </ul>
+        </div> -->
+
+        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <!-- No duplicate ID here -->
+            <video class="video sync-video" playsinline muted autoplay loop controls
+              src="./relit_compare/office_view2/input.mp4"></video>
+            <b>Input Video</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video" playsinline muted autoplay loop
+              src="./relit_compare/more_color/office_view2_condition.mp4"></video>
+            <b>Target Light Condition</b>
+          </div>
+        </div>
+
+        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
+          <div class="column is-one-half">
+            <video class="video sync-video" playsinline muted autoplay loop
+              src="./relit_compare/more_color/light_lab_recolor.mp4"></video>
+            <b>LightLab Relighting</b>
+          </div>
+          <div class="column is-one-half">
+            <video class="video sync-video" playsinline muted autoplay loop
+              src="./relit_compare/more_color/office_view2_out.mp4"></video>
+            <b>Our Relighting</b>
+          </div>
+        </div>
+      </div> <!-- .column is-full -->
+
+    </div> <!-- .container -->
+  </section>
+
+  <!-- Inline JS for swipe video comparison -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const wipeBlocks = document.querySelectorAll(".video-wipe-container");
+
+      wipeBlocks.forEach((block) => {
+        const videoA = block.querySelector(".videoA");
+        const videoB = block.querySelector(".videoB");
+        const range = block.querySelector(".video-compare-range");
+        const handle = block.querySelector(".video-compare-handle");
+
+        if (!videoA || !videoB || !range || !handle) return;
+
+        [videoA, videoB].forEach((v) => {
+          v.muted = true;
+          v.loop = true;
+          v.playsInline = true;
+          v.autoplay = true;
+          v.addEventListener("canplay", () => {
+            v.play().catch(() => { });
+          });
+        });
+
+        function syncVideos() {
+          if (Math.abs(videoB.currentTime - videoA.currentTime) > 0.05) {
+            videoB.currentTime = videoA.currentTime;
+          }
+        }
+
+        videoA.addEventListener("timeupdate", syncVideos);
+        videoA.addEventListener("seeking", syncVideos);
+        videoA.addEventListener("play", () => {
+          videoB.play().catch(() => { });
+        });
+        videoA.addEventListener("pause", () => {
+          videoB.pause();
+        });
+
+        function updateWipe(s) {
+          const split = Math.min(100, Math.max(0, Number(s)));
+          const left = split;
+          const right = 100 - split;
+
+          videoA.style.clipPath = `inset(0 ${right}% 0 0)`;
+          videoB.style.clipPath = `inset(0 0 0 ${left}%)`;
+
+          handle.style.left = `calc(${split}% - 12px)`;
+        }
+
+        updateWipe(range.value);
+
+        range.addEventListener("input", (e) => {
+          updateWipe(e.target.value);
+        });
+      });
+    });
+  </script>
+
+</body>
+
+</html>
