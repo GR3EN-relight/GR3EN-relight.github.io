@@ -21,57 +21,213 @@
   <script src="./static/js/bulma-slider.min.js"></script>
   <script src="./static/js/index.js"></script>
   <script src="./static/js/video_comparison.js"></script>
+
+  <style>
+    /* Hover-to-pause styles */
+    .video-hover-container {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .video-hover-container video {
+      display: block;
+      width: 100%;
+    }
+
+    .hover-hint {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .video-hover-container:hover .hover-hint {
+      opacity: 1;
+    }
+
+    .pause-indicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .video-hover-container.paused .pause-indicator {
+      opacity: 1;
+    }
+
+    .video-hint-banner {
+      background: linear-gradient(90deg, #4a90a4, #357abd);
+      color: white;
+      padding: 10px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .video-hint-banner i {
+      margin-right: 8px;
+    }
+  </style>
 </head>
 
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const master = document.getElementById("master-video");
+    if (!master) return;
+
     const allVideos = Array.from(document.querySelectorAll("video.sync-video"));
     const slaves = allVideos.filter(v => v !== master);
+    const SYNC_THRESHOLD = 0.03; // 30ms tolerance for tighter sync
 
-    // Make sure all videos are ready
+    // Preload all videos
     allVideos.forEach(v => {
       v.preload = "auto";
+      v.playbackRate = 1.0;
     });
 
     function syncTimes() {
       const t = master.currentTime;
       slaves.forEach(v => {
-        if (Math.abs(v.currentTime - t) > 0.05) {
+        if (Math.abs(v.currentTime - t) > SYNC_THRESHOLD) {
           v.currentTime = t;
         }
       });
     }
 
+    // Continuous sync loop for smooth playback
+    let syncAnimationId = null;
+    function startSyncLoop() {
+      function syncLoop() {
+        if (!master.paused) {
+          syncTimes();
+          syncAnimationId = requestAnimationFrame(syncLoop);
+        }
+      }
+      if (syncAnimationId) cancelAnimationFrame(syncAnimationId);
+      syncAnimationId = requestAnimationFrame(syncLoop);
+    }
+
+    function stopSyncLoop() {
+      if (syncAnimationId) {
+        cancelAnimationFrame(syncAnimationId);
+        syncAnimationId = null;
+      }
+    }
+
     master.addEventListener("play", () => {
       syncTimes();
-      slaves.forEach(v => v.play());
+      slaves.forEach(v => v.play().catch(() => {}));
+      startSyncLoop();
     });
 
     master.addEventListener("pause", () => {
+      stopSyncLoop();
       slaves.forEach(v => v.pause());
-    });
-
-    master.addEventListener("seeking", () => {
       syncTimes();
     });
 
-    // Keep them tightly synced while playing / looping
-    master.addEventListener("timeupdate", () => {
-      syncTimes();
+    master.addEventListener("seeking", syncTimes);
+    master.addEventListener("seeked", syncTimes);
+
+    // Handle loop restart synchronization
+    master.addEventListener("ended", () => {
+      if (master.loop) {
+        slaves.forEach(v => {
+          v.currentTime = 0;
+        });
+      }
     });
 
-    // When metadata is ready, align start time (helps with autoplay)
-    master.addEventListener("loadedmetadata", () => {
-      slaves.forEach(v => {
-        v.currentTime = master.currentTime;
+    // Wait for all videos to be ready before starting
+    let readyCount = 0;
+    function checkAllReady() {
+      readyCount++;
+      if (readyCount === allVideos.length) {
+        slaves.forEach(v => {
+          v.currentTime = master.currentTime;
+        });
+        if (master.autoplay && master.muted) {
+          master.play().catch(() => {});
+        }
+      }
+    }
+
+    allVideos.forEach(v => {
+      if (v.readyState >= 3) {
+        checkAllReady();
+      } else {
+        v.addEventListener("canplay", checkAllReady, { once: true });
+      }
+    });
+
+    // Hover-to-pause functionality for sync videos
+    let isHoverPaused = false;
+
+    function wrapVideoWithHover(video) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'video-hover-container';
+
+      const hint = document.createElement('div');
+      hint.className = 'hover-hint';
+      hint.textContent = 'Hover to pause';
+
+      const pauseIcon = document.createElement('div');
+      pauseIcon.className = 'pause-indicator';
+      pauseIcon.innerHTML = '&#10074;&#10074;';
+
+      video.parentNode.insertBefore(wrapper, video);
+      wrapper.appendChild(video);
+      wrapper.appendChild(hint);
+      wrapper.appendChild(pauseIcon);
+
+      return wrapper;
+    }
+
+    allVideos.forEach(video => {
+      const wrapper = wrapVideoWithHover(video);
+
+      wrapper.addEventListener('mouseenter', () => {
+        if (!master.paused) {
+          isHoverPaused = true;
+          master.pause();
+          wrapper.classList.add('paused');
+          document.querySelectorAll('.video-hover-container').forEach(w => w.classList.add('paused'));
+        }
       });
 
-      // In case autoplay was blocked, try to start it programmatically
-      if (master.autoplay && master.muted) {
-        master.play().catch(() => { /* ignore autoplay block */ });
-      }
+      wrapper.addEventListener('mouseleave', () => {
+        if (isHoverPaused) {
+          isHoverPaused = false;
+          master.play().catch(() => {});
+          wrapper.classList.remove('paused');
+          document.querySelectorAll('.video-hover-container').forEach(w => w.classList.remove('paused'));
+        }
+      });
     });
   });
 </script>
@@ -87,12 +243,6 @@
           <div class="column has-text-centered">
 
             <h1 class="title is-1 publication-title">GR3EN: Generative Relighting for <br> 3D Environments</h1>
-            <div class="is-size-4 publication-authors">
-              <span class="author-block">
-                <a href="#" target="_blank" style="font-size: 120%;"><b>Anonymous Submission</b></a>
-              </span>
-            </div>
-            <br>
 
             <div class="publication-links">
               <span class="link-block">
@@ -104,11 +254,19 @@
                 </a>
               </span>
               <span class="link-block">
+                <a href="./sidebyside.html" class="external-link button is-normal is-rounded">
+                  <span class="icon">
+                    <i class="fas fa-columns"></i>
+                  </span>
+                  <span>Side by Side Comparison</span>
+                </a>
+              </span>
+              <span class="link-block">
                 <a href="./lightlab.html" class="external-link button is-normal is-rounded">
                   <span class="icon">
                     <i class="fas fa-flask"></i>
                   </span>
-                  <span>Compare with LightLab</span>
+                  <span>LightLab Comparison</span>
                 </a>
               </span>
               <span class="link-block">
@@ -116,7 +274,7 @@
                   <span class="icon">
                     <i class="fas fa-flask"></i>
                   </span>
-                  <span>Compare with DiffusionRenderer</span>
+                  <span>DiffusionRenderer Comparison</span>
                 </a>
               </span>
               <span class="link-block">
@@ -127,23 +285,14 @@
                   <span>Fine-grained Control</span>
                 </a>
               </span>
-              <!-- <span class="link-block">
-                <a href="./tensoir.html" class="external-link button is-normal is-rounded">
+              <span class="link-block">
+                <a href="./realworld.html" class="external-link button is-normal is-rounded">
                   <span class="icon">
-                    <i class="fas fa-flask"></i>
+                    <i class="fas fa-video"></i>
                   </span>
-                  <span>Compare with Light-A-Video</span>
+                  <span>Real World Video Relighting</span>
                 </a>
               </span>
-              <span class="link-block">
-                <a href="./tensoir.html" class="external-link button is-normal is-rounded">
-                  <span class="icon">
-                    <i class="fas fa-flask"></i>
-                  </span>
-                  <span>Compare with GS-IR</span>
-                </a>
-              </span> -->
-              
             </div>
           </div>
 
@@ -155,16 +304,17 @@
 
   <section class="section">
     <div class="container is-max-desktop">
+      <div class="video-hint-banner">
+        <i class="fas fa-hand-pointer"></i>
+        <strong>Tip:</strong> Hover over any video to pause and examine details. Move your cursor away to resume playback.
+      </div>
 
       <h3 class="title is-3">3D Environment Relighting</h3>
-
+      <p style="margin-bottom: 1.5rem; color: #444;">
+        Below we show scenes from the Eyeful Tower dataset, comparing our relighting results with those of DiffusionRenderer.
+      </p>
 
       <div class="column is-full">
-        <div class="content has-text-left">
-          <ul style="margin-top: -20px;">
-            <!-- <li><b>Target light condition</b>: <tt>Desk lamp is turned on and emits warm yellow light. The ceiling lamp close to the coach is turned on, emits white light, while other ceiling lamps are turned off. The rest lights in the scene are also turned off.</tt> </li> -->
-          </ul>
-        </div>
                <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
           <div class="column is-one-half">
             <!-- MASTER VIDEO: has controls -->

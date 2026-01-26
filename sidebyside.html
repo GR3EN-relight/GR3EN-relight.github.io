@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GR3EN: Generative Relighting for 3D Environments</title>
+  <title>GR3EN: Side by Side Comparison</title>
 
   <link href="https://fonts.googleapis.com/css?family=Noto+Sans|Castoro" rel="stylesheet">
 
@@ -186,143 +186,6 @@
   </style>
 </head>
 
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const master = document.getElementById("master-video");
-    if (!master) return;
-
-    const allVideos = Array.from(document.querySelectorAll("video.sync-video"));
-    const slaves = allVideos.filter(v => v !== master);
-    const SYNC_THRESHOLD = 0.03; // 30ms tolerance for tighter sync
-    let isHoverPaused = false;
-
-    // Preload all videos
-    allVideos.forEach(v => {
-      v.preload = "auto";
-      v.playbackRate = 1.0;
-    });
-
-    function syncTimes() {
-      const t = master.currentTime;
-      slaves.forEach(v => {
-        if (Math.abs(v.currentTime - t) > SYNC_THRESHOLD) {
-          v.currentTime = t;
-        }
-      });
-    }
-
-    // Continuous sync loop for smooth playback
-    let syncAnimationId = null;
-    function startSyncLoop() {
-      function syncLoop() {
-        if (!master.paused) {
-          syncTimes();
-          syncAnimationId = requestAnimationFrame(syncLoop);
-        }
-      }
-      if (syncAnimationId) cancelAnimationFrame(syncAnimationId);
-      syncAnimationId = requestAnimationFrame(syncLoop);
-    }
-
-    function stopSyncLoop() {
-      if (syncAnimationId) {
-        cancelAnimationFrame(syncAnimationId);
-        syncAnimationId = null;
-      }
-    }
-
-    master.addEventListener("play", () => {
-      syncTimes();
-      slaves.forEach(v => v.play().catch(() => {}));
-      startSyncLoop();
-    });
-
-    master.addEventListener("pause", () => {
-      stopSyncLoop();
-      slaves.forEach(v => v.pause());
-      syncTimes();
-    });
-
-    master.addEventListener("seeking", syncTimes);
-    master.addEventListener("seeked", syncTimes);
-
-    // Handle loop restart synchronization
-    master.addEventListener("ended", () => {
-      if (master.loop) {
-        slaves.forEach(v => {
-          v.currentTime = 0;
-        });
-      }
-    });
-
-    // Wait for all videos to be ready before starting
-    let readyCount = 0;
-    function checkAllReady() {
-      readyCount++;
-      if (readyCount === allVideos.length) {
-        slaves.forEach(v => {
-          v.currentTime = master.currentTime;
-        });
-        if (master.autoplay && master.muted) {
-          master.play().catch(() => {});
-        }
-      }
-    }
-
-    allVideos.forEach(v => {
-      if (v.readyState >= 3) {
-        checkAllReady();
-      } else {
-        v.addEventListener("canplay", checkAllReady, { once: true });
-      }
-    });
-
-    // Hover-to-pause functionality for sync videos
-    function wrapVideoWithHover(video) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'video-hover-container';
-
-      const hint = document.createElement('div');
-      hint.className = 'hover-hint';
-      hint.textContent = 'Hover to pause';
-
-      const pauseIcon = document.createElement('div');
-      pauseIcon.className = 'pause-indicator';
-      pauseIcon.innerHTML = '&#10074;&#10074;';
-
-      video.parentNode.insertBefore(wrapper, video);
-      wrapper.appendChild(video);
-      wrapper.appendChild(hint);
-      wrapper.appendChild(pauseIcon);
-
-      return wrapper;
-    }
-
-    allVideos.forEach(video => {
-      const wrapper = wrapVideoWithHover(video);
-
-      wrapper.addEventListener('mouseenter', () => {
-        if (!master.paused) {
-          isHoverPaused = true;
-          master.pause();
-          wrapper.classList.add('paused');
-          // Update all wrappers to show paused state
-          document.querySelectorAll('.video-hover-container').forEach(w => w.classList.add('paused'));
-        }
-      });
-
-      wrapper.addEventListener('mouseleave', () => {
-        if (isHoverPaused) {
-          isHoverPaused = false;
-          master.play().catch(() => {});
-          wrapper.classList.remove('paused');
-          document.querySelectorAll('.video-hover-container').forEach(w => w.classList.remove('paused'));
-        }
-      });
-    });
-  });
-</script>
-
 <body>
 
   <section class="hero">
@@ -333,10 +196,9 @@
 
             <h1 class="title is-1 publication-title">GR3EN: Generative Relighting for <br> 3D Environments</h1>
 
-
             <div class="publication-links">
               <span class="link-block">
-                <a href="./index.html" id="active-button" class="external-link button is-normal is-rounded">
+                <a href="./index.html" class="external-link button is-normal is-rounded">
                   <span class="icon">
                     <i class="fas fa-home"></i>
                   </span>
@@ -344,7 +206,7 @@
                 </a>
               </span>
               <span class="link-block">
-                <a href="./sidebyside.html" class="external-link button is-normal is-rounded">
+                <a href="./sidebyside.html" id="active-button" class="external-link button is-normal is-rounded">
                   <span class="icon">
                     <i class="fas fa-columns"></i>
                   </span>
@@ -384,11 +246,6 @@
                 </a>
               </span>
             </div>
-            <!-- <div class="notification is-light" style="margin-top: 1.5rem;">
-              <strong>TL;DR:</strong>
-              We relight 3D indoor environments directly from user-specified lighting conditions—no inverse
-              rendering or explicit lighting estimation required.
-            </div> -->
 
           </div>
         </div>
@@ -396,57 +253,18 @@
     </div>
   </section>
 
-  <section class="hero teaser">
-  <div class="container is-max-desktop">
-    <div class="hero-body">
-      <video id="teaser" autoplay muted loop playsinline height="100%">
-        <source src="./relit_compare/teaser_video.mp4"
-                type="video/mp4">
-      </video>
-      <h2 class="subtitle has-text-centered">
-        GR3EN enables relighting room-scale 3D environments to user-specified lighting conditions
-      </h2>
-    </div>
-  </div>
-</section>
-
-
- <hr />
-
-  <section class="section">
-    <div class="container is-max-desktop">
-      <!-- Abstract. -->
-      <h2 class="title is-3">Abstract</h2>
-      <div class="content has-text-justified">
-        <p>
-          We present a method for relighting 3D reconstructions of large room-scale environments.
-          Existing solutions for 3D scene relighting often require solving under-determined or ill-conditioned inverse rendering problems, and are as such unable to produce high-quality results on complex real-world scenes.
-          Though recent progress in using generative image and video diffusion models for relighting has been promising, these techniques are either limited to 2D image and video relighting or 3D relighting of individual objects.
-          Our approach enables controllable 3D relighting of room-scale scenes by distilling the outputs of a video-to-video relighting diffusion model into a 3D reconstruction.
-          This side-steps the need to solve a difficult inverse rendering problem, and results in a flexible system that can relight 3D reconstructions of complex real-world scenes.
-          We validate our approach on both synthetic and real-world datasets to show that it can faithfully render novel views of scenes under new lighting conditions. 
-        </p>
-      </div>
-    </div>
-  </section>
- <hr />
-  <!-- Wipe comparison section -->
+  <!-- Side by Side Comparison Section -->
   <section class="section">
     <div class="container is-max-desktop">
       <div class="video-hint-banner">
         <i class="fas fa-hand-pointer"></i>
-        <strong>Tip:</strong> Hover over any video to pause and examine details. Move your cursor away to resume playback.
+        <strong>Tip:</strong> Hover over any video to pause and examine details. Drag the slider to compare input and output.
       </div>
+
       <h3 class="title is-3">Side by Side Relighting Visualization</h3>
-      <h5 class="title is-5">
-        More results at
-        <a href="./sidebyside.html" class="external-link button is-normal is-rounded">
-          <span class="icon">
-            <i class="fas fa-columns"></i>
-          </span>
-          <span>Side by Side Comparison</span>
-        </a>
-      </h5>
+      <p style="margin-bottom: 1.5rem; color: #444;">
+        Below we show side-by-side comparisons of input videos and our relighting results on scenes from the Eyeful Tower dataset. Drag the slider to compare.
+      </p>
 
       <!-- Pair 1 -->
 	  Here we turn off the exterior light, turn off two of the three overhead lights, and turn on a yellow lamp on the table. Note how the reflections visible on the floor in the input video are not present in the output video.
@@ -476,8 +294,37 @@
         </div>
       </div>
 
+      <!-- Pair 2 -->
+  	  <br><br>
+	  Here we turn off the exterior light, and half of the overhead lights. Note the reflection of the exterior lights reflected in the glossy white wall, which is visible in the input video but is correctly removed in the output video. Also note how the window in the output video contains a reflection of the interior scene that was not visible in the input video.
+      <div class="video-compare-wrapper">
+        <div class="video-wipe-container">
+          <video class="video videoA" playsinline muted autoplay loop
+            src="./relit_compare/office_view2/input_og.mp4"></video>
+          <video class="video videoB" playsinline muted autoplay loop
+            src="./relit_compare/office_view2/office_view2_60p.mp4"></video>
 
+          <input type="range" min="0" max="100" value="50" class="video-compare-range"
+            aria-label="Video comparison slider" />
 
+          <div class="video-compare-handle">
+            <span class="video-compare-handle-line"></span>
+            <span class="video-compare-handle-dot"></span>
+          </div>
+        </div>
+
+        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered" style="margin-top: 0.75rem;">
+          <div class="column">
+            <b>Left:</b> Input Video
+          </div>
+          <div class="column">
+            <b>Right:</b> Our Relighting
+          </div>
+        </div>
+      </div>
+
+      <!-- Pair 3 -->
+      <br><br>
       Here we turn off the exterior light, turn on three of the six overhead lights and assign them with different colors. Note again the correct removal and inclusion of reflections, as well as global-illumination effects.
       <div class="video-compare-wrapper">
         <div class="video-wipe-container">
@@ -504,35 +351,10 @@
           </div>
         </div>
       </div>
-      <!-- Pair 3 -->
-	  <!-- <br><br>
-	  Here we turn off half of the overhead lights. Note that the reflection of both sets of lights are visible in the shiny white walls in the input video, but half of the reflections disappear in all reflections in the output video.
-      <div class="video-compare-wrapper">
-        <div class="video-wipe-container">
-          <video class="video videoA" playsinline muted autoplay loop
-            src="./relit_compare/office1a/input.mp4"></video>
-          <video class="video videoB" playsinline muted autoplay loop
-            src="./relit_compare/office1a/our_relit.mp4"></video>
 
-          <input type="range" min="0" max="100" value="50" class="video-compare-range"
-            aria-label="Video comparison slider" />
-
-          <div class="video-compare-handle">
-            <span class="video-compare-handle-line"></span>
-            <span class="video-compare-handle-dot"></span>
-          </div>
-        </div>
-
-        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered" style="margin-top: 0.75rem;">
-          <div class="column">
-            <b>Left:</b> Input Video
-          </div>
-          <div class="column">
-            <b>Right:</b> Our Relighting
-          </div>
-        </div>
-      </div> -->
-    Here we turn off all overhead lights and insert a billboard-shaped neon light. Note that the reflection of the neon light appears on surfaces like windows, TV screens, and the table. Also note the cast shadows of objects on the table.
+      <!-- Pair 4 -->
+      <br><br>
+      Here we turn off all overhead lights and insert a billboard-shaped neon light. Note that the reflection of the neon light appears on surfaces like windows, TV screens, and the table. Also note the cast shadows of objects on the table.
       <div class="video-compare-wrapper">
         <div class="video-wipe-container">
           <video class="video videoA" playsinline muted autoplay loop
@@ -559,170 +381,7 @@
         </div>
       </div>
 
-
     </div>
-  </section>
-
-  <!-- Real World Video Relighting -->
-  <section class="section">
-    <div class="container is-max-desktop">
-      <h3 class="title is-3">Real World Video Relighting</h3>
-      <h5 class="title is-5">
-        More results at
-        <a href="./realworld.html" class="external-link button is-normal is-rounded">
-          <span class="icon">
-            <i class="fas fa-video"></i>
-          </span>
-          <span>Real World Video Relighting</span>
-        </a>
-      </h5>
-
-      Here we turn on the LEGO Lamp, note the cast shadow of the ball and the reflectance on the surface of the ball.
-      <div class="video-compare-wrapper">
-        <div class="video-wipe-container">
-          <video class="video videoA" playsinline muted autoplay loop
-            src="./relit_compare/real_world/lego_in.mp4"></video>
-          <video class="video videoB" playsinline muted autoplay loop
-            src="./relit_compare/real_world/lego_out.mp4"></video>
-
-          <input type="range" min="0" max="100" value="50" class="video-compare-range"
-            aria-label="Video comparison slider" />
-
-          <div class="video-compare-handle">
-            <span class="video-compare-handle-line"></span>
-            <span class="video-compare-handle-dot"></span>
-          </div>
-        </div>
-
-        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered" style="margin-top: 0.75rem;">
-          <div class="column">
-            <b>Left:</b> Input Video
-          </div>
-          <div class="column">
-            <b>Right:</b> Our Relighting
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 3D Environment Relighting -->
-  <section class="section">
-    <div class="container is-max-desktop">
-
-      <h3 class="title is-3">3D Environment Relighting</h3>
-      <h5 class="title is-5">
-        More results at
-        <a href="./lightlab.html" class="external-link button is-normal is-rounded">
-          <span class="icon">
-            <i class="fas fa-flask"></i>
-          </span>
-          <span>LightLab Comparison</span>
-        </a>
-        <a href="./dfrender.html" class="external-link button is-normal is-rounded">
-          <span class="icon">
-            <i class="fas fa-flask"></i>
-          </span>
-          <span>DiffusionRenderer Comparison</span>
-        </a>
-      </h5>
-
-      <div class="column is-full">
-        <!-- <div class="content has-text-left">
-          <ul style="margin-top: -20px;">
-            <li>
-              <b>Target light condition</b>: <tt>Desk lamp is turned on and emits warm yellow light. The ceiling lamp close
-              to the coach is turned on, emits white light, while other ceiling lamps are turned off. The rest lights in
-              the scene are also turned off.</tt>
-            </li>
-          </ul>
-        </div> -->
-
-        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
-          <div class="column is-one-half">
-            <!-- MASTER VIDEO -->
-            <video id="master-video" class="video sync-video" playsinline muted autoplay loop controls
-              src="./relit_compare/seating_light2/input.mp4"></video>
-            <b>Input Video</b>
-          </div>
-          <div class="column is-one-half">
-            <video class="video sync-video" playsinline muted autoplay loop
-              src="./relit_compare/seating_light2/condition.mp4"></video>
-            <b>Target Light Condition</b>
-          </div>
-        </div>
-
-        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
-          <div class="column is-one-half">
-            <video class="video sync-video" playsinline muted autoplay loop
-              src="./relit_compare/seating_light2/lightlab_relit.mp4"></video>
-            <b>LightLab Relighting</b>
-          </div>
-          <div class="column is-one-half">
-            <video class="video sync-video" playsinline muted autoplay loop
-              src="./relit_compare/seating_light2/our_relit.mp4"></video>
-            <b>Our Relighting</b>
-          </div>
-        </div>
-      </div> <!-- .column is-full -->
-
-    </div> <!-- .container -->
-  </section>
-
-  <!-- Fine-grained Light Control -->
-  <section class="section">
-    <div class="container is-max-desktop">
-      <h3 class="title is-3">Fine-grained Light Control</h3>
-      <h5 class="title is-5">
-        More results at
-        <a href="./fine_control.html" class="external-link button is-normal is-rounded">
-          <span class="icon">
-            <i class="fas fa-flask"></i>
-          </span>
-          <span>Fine-grained Light Control</span>
-        </a>
-      </h5>
-
-      <div class="column is-full">
-        <!-- <div class="content has-text-left">
-          <ul style="margin-top: -20px;">
-            <li>
-              <b>Target light condition</b>: <tt>Desk lamp is turned on and emits warm yellow light. The ceiling lamp close
-              to the coach is turned on, emits white light, while other ceiling lamps are turned off. The rest lights in
-              the scene are also turned off.</tt>
-            </li>
-          </ul>
-        </div> -->
-
-        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
-          <div class="column is-one-half">
-            <!-- No duplicate ID here -->
-            <video class="video sync-video" playsinline muted autoplay loop controls
-              src="./relit_compare/office1a/input.mp4"></video>
-            <b>Input Video</b>
-          </div>
-          <div class="column is-one-half">
-            <video class="video sync-video" playsinline muted autoplay loop
-              src="./relit_compare/more_color/rg_condition.mp4"></video>
-            <b>Target Light Condition</b>
-          </div>
-        </div>
-
-        <div class="columns is-mobile has-text-centered is-size-7-mobile is-vcentered">
-          <div class="column is-one-half">
-            <video class="video sync-video" playsinline muted autoplay loop
-              src="./relit_compare/more_color/rg_lightlab.mp4"></video>
-            <b>LightLab Relighting</b>
-          </div>
-          <div class="column is-one-half">
-            <video class="video sync-video" playsinline muted autoplay loop
-              src="./relit_compare/more_color/rg_our.mp4"></video>
-            <b>Our Relighting</b>
-          </div>
-        </div>
-      </div> <!-- .column is-full -->
-
-    </div> <!-- .container -->
   </section>
 
   <!-- Inline JS for swipe video comparison -->
@@ -835,7 +494,6 @@
         // Hover-to-pause for wipe comparison
         let isWipeHoverPaused = false;
 
-        // Add hover hint to wipe container
         const wipeHint = document.createElement('div');
         wipeHint.className = 'hover-hint';
         wipeHint.style.cssText = 'position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);color:white;padding:4px 8px;border-radius:4px;font-size:11px;opacity:0;transition:opacity 0.3s;z-index:10;';
